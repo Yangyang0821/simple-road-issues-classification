@@ -1,5 +1,16 @@
+# Python
 .venv/
 .env
 __pycache__/
 *.pyc
 *.log
+.vscode/
+
+# Dataset
+dataset/
+
+# Model checkpoints
+*.pth
+
+# Local / test files
+test.py
