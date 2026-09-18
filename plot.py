@@ -1,12 +1,14 @@
 import csv
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from dataclasses import asdict
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from pathlib import Path
 
-from config import Output_paths
+from config import Config, Output_paths
 from cnn_model import per_class_accuracy, precision_recall_f1, recall_and_f1
 
 
@@ -177,3 +179,10 @@ def save_report_csv(cm: torch.Tensor, class_names: list[str], filename: str = "r
         writer.writerow(header)
         writer.writerows(rows)
     print(f"Result saved: {out_path}")
+
+
+def save_config(config: Config, filename: str = "config.json"):
+    out_path = Path(Output_paths.result_dir) / filename
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(asdict(config), f, indent=4)

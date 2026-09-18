@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
+
 
 @dataclass
 class Dataset_info():
@@ -13,9 +14,9 @@ class Dataset_info():
 
 @dataclass
 class Output_paths():
-    experiment_name = "baseline"   # Creat experiment result folder
+    experiment_name: str = "class-weighted_training"   # Creat experiment result folder
     result_dir: str = str(PROJECT_DIR / "outputs" / experiment_name)
-    best_model_path: str = str(PROJECT_DIR / "outputs" / "best_model.pth")
+    best_model_path: str = str(PROJECT_DIR / "outputs" / experiment_name / "best_model.pth")
 
 @dataclass
 class Hyperparameters():
@@ -26,7 +27,7 @@ class Hyperparameters():
     validation_ratio: float = 0.1
     test_ratio: float = 0.1
 
-    use_class_weights: bool = False
+    use_class_weights: bool = True
     model_selection_metric: str = "accuracy"  # "accuracy" or "balanced_accuracy"
 
 @dataclass
@@ -51,3 +52,11 @@ class CNN_Parameters():
     fc3_in:int = 16
 
     pool_kernel_size:int = 2
+
+
+@dataclass
+class Config():
+    dataset_info: Dataset_info = field(default_factory=Dataset_info)
+    output_paths: Output_paths = field(default_factory=Output_paths)
+    hyperparameters: Hyperparameters = field(default_factory=Hyperparameters)
+    cnn_parameters: CNN_Parameters = field(default_factory=CNN_Parameters)

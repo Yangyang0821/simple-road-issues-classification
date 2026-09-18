@@ -1,9 +1,9 @@
 from cnn_model import set_model, model_training, validate_epoch, load_best_model
-from config import Hyperparameters, CNN_Parameters
+from config import CNN_Parameters, Config, Hyperparameters
 from get_data import (download_dataset, load_dataset, create_dataloaders,
                       count_labels, compute_class_weights)
 from prepare_dataset import TRAIN_CLASSES
-from plot import plot_training_curves, plot_evaluation_result, save_report_csv
+from plot import plot_training_curves, plot_evaluation_result, save_report_csv, save_config
 
 if __name__ == "__main__":
     class_names = list(TRAIN_CLASSES)
@@ -35,3 +35,5 @@ if __name__ == "__main__":
     plot_training_curves(history)
     plot_evaluation_result(test_cm, val_cm, class_names)
     save_report_csv(test_cm, class_names, filename="result_test.csv")
+    config = Config()
+    save_config(config, filename="config.json")

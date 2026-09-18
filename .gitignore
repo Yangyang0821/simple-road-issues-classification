@@ -9,8 +9,9 @@ __pycache__/
 # Dataset
 dataset/
 
-# Model checkpoints
+# Result
 *.pth
+*.json
 
 # Local / test files
 test.py

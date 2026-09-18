@@ -4,8 +4,6 @@ Classifying street-level photos into 6 categories of urban road problems
 (potholes, damaged roads, broken signs, illegal parking, littering, vandalism)
 with a compact CNN trained from scratch on CPU.
 
-![Training curves](outputs/baseline/training_curves.png)
-
 ## Motivation
 
 My graduate research was in deep reinforcement learning, so I had little hands-on
@@ -43,7 +41,7 @@ paths longer than 260 characters, which makes `zipfile` fail. It extracts with t
 
 ## Model
 
-A 3-block CNN, ~70K parameters:
+A 3-block CNN:
 [Conv3x3(16) -> BatchNorm -> ReLU -> MaxPool2 -> Dropout] x 3
 -> Flatten -> FC(4096->16) -> ReLU -> FC(16->16) -> ReLU -> FC(16->6)
 
@@ -69,34 +67,90 @@ and used for the test set.
 |                  |                   |    littering(12), pothole(20)   |
 | broken_road_sign |            81.01% | ->     vandalism (27)           |
 | illegal_parking  |             30.0% |        (only 10 samples)        |
-| damaged_road     |            22.06% | ->     pothole (52 of 68)       |
+| damaged_road     |             22.1% | ->     pothole (52 of 68)       |
 
+![Training curves](outputs/baseline/training_curves.png)
 ![Result](outputs/baseline/evaluation_result.png)
 
-### What the confusion matrix says
+### Interpretation:
 
 * **Overall accuracy is misleading.** 84.48% is mostly `pothole` and `littering`.
   Balanced accuracy (mean per-class recall) is a fairer number: ~67.75%.
 * **`damaged_road` collapses into `pothole`** (78% of the time). Both are
   "defects on the road surface", and `pothole` has 5x more samples, so the model
-  defaults to the majority class when unsure. 128x128 resolution probably also
-  removes the crack detail that separates them.
+  defaults to the majority class when unsure. The 128x128 input resolution may also make
+  fine-grained surface details harder to distinguish.
 * **`broken_road_sign` -> `vandalism` and `vandalism` -> `littering`** suggest the
   model is partly learning "street scene with something wrong" rather than the object.
 * **Validation accuracy oscillated wildly during training**. With this
   imbalance, a small shift in the decision boundary sends whole minority classes
   into `pothole`, which shows up as a dramatic oscillation of accuracy of 30-40 percentage points.
 
+
+### v2 - class-weighted loss
+
+The baseline showed a large gap between overall accuracy and balanced accuracy, with `damaged_road` and `illegal_parking` performing particularly poorly.
+
+To address the class imbalance, I enabled class-weighted cross-entropy loss. The class weights are computed from the training-set class frequencies using inverse-frequency weighting.
+
+The rest of the training configuration was kept unchanged, and model selection still used validation accuracy.
+
+| Metric              | Test    |
+|---------------------|--------:|
+| Accuracy            |  79.41% |
+| Balanced accuracy   | ~72.03% |
+| Best epoch (of 50)  |      48 |
+
+| Class            | Test acc (recall) | Main confusion                  |
+|------------------|------------------:|---------------------------------|
+| pothole          |             92.2% | ->     damaged_road(25)         |
+| littering        |             94.4% | -                               |
+| vandalism        |             66.2% | ->     broken_road_sign(13),    |
+|                  |                   | damaged_road(11), littering(37) |
+| broken_road_sign |             67.6% | -> littering(29), vandalism(24) |
+| illegal_parking  |             50.0% |        (only 10 samples)        |
+| damaged_road     |             61.8% | ->     pothole (25 of 68)       |
+
+![Training curves](outputs/class-weighted_training/training_curves.png)
+![Result](outputs/class-weighted_training/evaluation_result.png)
+
+Comparison of v1 and v2
+
+| Metric              | v1 baseline | v2 weighted |
+|---------------------|------------:|------------:|
+| Accuracy            |      84.48% |      79.41% |
+| Balanced accuracy   |     ~67.75% |     ~72.03% |
+| Macro F1            |       0.715 |       0.704 |
+| damaged_road recall |       22.1% |       61.8% |
+
+
+Class weighting reduced overall accuracy by 5.07 percentage points, but improved balanced accuracy by 4.28 percentage points.
+
+The most noticeable change was `damaged_road` recall, which increased from 22.1% to 61.8%. In the baseline, 52 of 68 `damaged_road` test samples were classified as `pothole`; with class weighting, this decreased to 25 of 68.
+
+At the same time, performance on some majority classes decreased. For example, `pothole` recall decreased from 99.7% to 92.2% and `vandalism` recall decreased from 79.3% to 66.2%.
+
+This suggests that class weighting changed the decision boundary rather than simply improving every class: the model became less biased toward the majority classes, trading some overall accuracy for more balanced performance.
+
+### Interpretation:
+
+* **Overall accuracy decreased:** 84.48% → 79.41% (-5.07 percentage points).
+* **`damaged_road` improved substantially:** recall increased from 22.1% → 61.8%, while misclassification as `pothole` decreased from 52/68 → 25/68 samples.
+* **Balanced performance improved:** balanced accuracy increased from 67.75% → 72.03% (+4.28 percentage points).
+* **The trade-off is not uniformly positive:** `pothole`, `vandalism`, and `broken_road_sign` recall all decreased.
+* **`illegal_parking` improved from 30% → 50%**, but the test set contains only 10 samples, so this result should be interpreted cautiously.
+
+
 ## Project structure
 
-config.py            hyperparameters, model shape, output paths, experiment switches
-prepare_dataset.py   download from Kaggle and build dataset/raw/<class>/*.jpg
-get_data.py          Dataset / DataLoader, stratified split, class weights
-cnn_model.py         model, train / validate loops, metrics (confusion matrix, F1, ...)
-plot.py              training curves, confusion matrix, per-class accuracy
-main.py              end-to-end entry point
-outputs/             all experiment result, save best_model.pth (git-ignored), figures
-                     and csv file
+config.py           hyperparameters, model shape, output paths, experiment switches
+prepare_dataset.py  download from Kaggle and build dataset/raw/<class>/*.jpg
+get_data.py         Dataset / DataLoader, stratified split, class weights
+cnn_model.py        model, train / validate loops, metrics (confusion matrix, F1, ...)
+plot.py             training curves, confusion matrix, per-class accuracy
+main.py             end-to-end entry point
+outputs/            all experiment result, save best_model.pth (git-ignored), figures,
+                    csv file and config.txt
 
 ## How to run
 
@@ -115,4 +169,3 @@ Runs on CPU; ~30 min for 50 epochs on an i5-12400.
   each image exactly once per epoch with no variation.
 * Higher input resolution for the `damaged_road` vs `pothole` distinction.
 * Learning-rate schedule (cosine / ReduceLROnPlateau) to reduce validation oscillation.
-

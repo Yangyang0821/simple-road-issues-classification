@@ -166,7 +166,7 @@ def per_class_accuracy(cm: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def precision_recall_f1(cm: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    # Class precision / recall / F1 (0~1) caculate
+    # Class precision / recall / F1 (0~1)
     tp = cm.diag().float()
     predicted_per_class = cm.sum(dim=0).float()   # column sums
     actual_per_class = cm.sum(dim=1).float()      # row sums
