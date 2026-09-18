@@ -1,10 +1,10 @@
-from pathlib import Path
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from pathlib import Path
 from torch.utils.data import DataLoader
+
 from config import Hyperparameters, CNN_Parameters, Output_paths
 
 class RoadIssuesCNN(nn.Module):
@@ -70,9 +70,6 @@ class RoadIssuesCNN(nn.Module):
 
 def set_model(class_weights: torch.Tensor | None = None
               ) -> tuple[nn.Module, nn.Module, torch.optim.Optimizer, torch.device]:
-    """class_weights 為 None 時就是一般的 CrossEntropyLoss (v1 baseline)。
-    傳入 [num_classes] 的 tensor 時，第 c 類的 loss 會乘上 class_weights[c]。
-    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = RoadIssuesCNN().to(device)
     if class_weights is not None:
@@ -115,10 +112,7 @@ def validate_epoch(
         loss_function: nn.Module,
         model:nn.Module,
         val_loader:DataLoader):
-    """回傳 (accuracy %, loss, confusion matrix)。
-    confusion matrix 順便在這裡累加，model_training 就能不多跑一次資料
-    直接算 balanced accuracy 來挑 best model。
-    """
+
     model.eval()
     total_eval_loss, correct_eval, total_eval = 0, 0, 0
     num_classes = CNN_Parameters.num_classes
@@ -135,7 +129,7 @@ def validate_epoch(
             _, predicted = logits.max(1)
             correct_eval += predicted.eq(labels).sum().item()
             total_eval += labels.size(0)
-            cm += confusion_matrix(predicted.cpu(), labels.cpu(), num_classes)
+            cm += compute_confusion_matrix(predicted.cpu(), labels.cpu(), num_classes)
 
     eval_accuracy = 100 * correct_eval / total_eval
     eval_loss = total_eval_loss / len(val_loader)
@@ -143,27 +137,26 @@ def validate_epoch(
     return eval_accuracy, eval_loss, cm
 
 
-# ---------------------------------------------------------------------------
-# 評估指標：只負責「算」，畫圖 / 輸出表格都在 plot.py
-# ---------------------------------------------------------------------------
-def confusion_matrix(
+def compute_confusion_matrix(
         predictions: torch.Tensor,
         labels: torch.Tensor,
         num_classes: int = CNN_Parameters.num_classes) -> torch.Tensor:
-    """回傳 [num_classes, num_classes] 的矩陣。
-    第 i 列 (row) = 真實類別 i，第 j 欄 (column) = 被預測成類別 j。
-    對角線是預測正確的數量，非對角線就是「把 i 誤認成 j」的次數。
-    """
-    # 技巧：把 (真實, 預測) 這一對編碼成單一整數 label*C + pred，再用 bincount 計數
+    # Returns a [num_classes, num_classes] confusion matrix.
+    # Rows represent the ground-truth classes, while columns represent the predicted classes.
+    # The diagonal contains the number of correct predictions.
+    # Off-diagonal entries represent misclassifications:
+    # ground-truth class i was predicted as class j.
+    #
+    # Implementation:
+    # Encode each (ground-truth, prediction) pair as a single integer using the formula: label * num_classes + prediction.
+    # torch.bincount() is then used to count the occurrences of each pair.
     indices = labels * num_classes + predictions
     counts = torch.bincount(indices, minlength=num_classes * num_classes)
     return counts.reshape(num_classes, num_classes)
 
 
 def per_class_accuracy(cm: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """由 confusion matrix 算出每個類別的準確率 (%) (= recall) 與每類的樣本數。
-    某類別若沒有任何樣本，準確率記為 0 以避免除以零。
-    """
+    # Caculate every class recall(accuracy) and dataset num by confusion matrix
     correct_per_class = cm.diag().float()
     total_per_class = cm.sum(dim=1).float()
     accuracy = torch.where(total_per_class > 0,
@@ -184,9 +177,7 @@ def precision_recall_f1(cm: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, t
 
 
 def recall_and_f1(cm: torch.Tensor) -> tuple[float, float]:
-    """回傳 (balanced accuracy %, macro F1 %)。
-    balanced accuracy = 各類 recall 的平均；macro F1 = 各類 F1 的平均。
-    """
+    #balanced accuracy = all class recall average；macro F1 = all class F1 average
     _, recall, f1 = precision_recall_f1(cm)
     return 100 * recall.mean().item(), 100 * f1.mean().item()
 
@@ -195,7 +186,6 @@ def load_best_model(model: nn.Module, device: torch.device,
                     path: str = Output_paths.best_model_path) -> nn.Module:
     state = torch.load(path, map_location=device)
     model.load_state_dict(state)
-    print(f"Loaded best model from: {path}")
     return model
 
 
@@ -227,7 +217,7 @@ def model_training(device: torch.device,
         history["val_acc"].append(val_acc)
         history["val_balanced_acc"].append(val_balanced)
 
-        # 用 config 指定的 validation 指標挑 best model
+        # Best model select
         score = val_balanced if metric == "balanced_accuracy" else val_acc
         is_best = score > best_score
         if is_best:

@@ -5,6 +5,7 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
+
 from config import Hyperparameters
 from prepare_dataset import prepare, get_class_to_idx
 
@@ -102,15 +103,3 @@ def create_dataloaders(train_dataset, val_dataset, test_dataset):
     # print("labels", labels[0])
     # print("labels shape:", labels.shape)
     return train_loader, val_loader, test_loader
-
-
-if __name__ == "__main__":
-    dataset_root = download_dataset()
-    image_paths = get_dataset(dataset_root)
-    # modes = Counter()
-    # for image_path, label in image_paths:
-    #     with Image.open(image_path) as image:
-    #         modes[image.mode] += 1
-    # print(modes)
-    train_dataset, val_dataset, test_dataset = load_dataset(dataset_root)
-    train_loader, val_loader, test_loader = create_dataloaders(train_dataset, val_dataset, test_dataset)

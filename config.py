@@ -13,22 +13,21 @@ class Dataset_info():
 
 @dataclass
 class Output_paths():
-    result_dir: str = str(PROJECT_DIR / "outputs")
+    experiment_name = "baseline"   # Creat experiment result folder
+    result_dir: str = str(PROJECT_DIR / "outputs" / experiment_name)
     best_model_path: str = str(PROJECT_DIR / "outputs" / "best_model.pth")
 
 @dataclass
 class Hyperparameters():
     learning_rate:float = 0.001
-    num_epochs:int = 20
+    num_epochs:int = 50
     batch_size:int = 32
     train_ratio: float = 0.8
     validation_ratio: float = 0.1
     test_ratio: float = 0.1
 
     use_class_weights: bool = False
-    # "accuracy"          -> 用整體準確率挑 best model (v1 行為)
-    # "balanced_accuracy" -> 用六類準確率的平均挑，避免只挑到「pothole 猜最準」的 epoch
-    model_selection_metric: str = "accuracy"
+    model_selection_metric: str = "accuracy"  # "accuracy" or "balanced_accuracy"
 
 @dataclass
 class CNN_Parameters():
