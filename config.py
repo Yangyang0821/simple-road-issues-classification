@@ -14,14 +14,14 @@ class Dataset_info():
 
 @dataclass
 class Output_paths():
-    experiment_name: str = "baseline"   # Creat experiment result folder
+    experiment_name: str = "Your experiment name"   # Creat experiment result folder
     result_dir: str = str(PROJECT_DIR / "outputs" / experiment_name)
     best_model_path: str = str(PROJECT_DIR / "outputs" / experiment_name / "best_model.pth")
 
 @dataclass
 class Hyperparameters():
     learning_rate:float = 0.001
-    num_epochs:int = 2
+    num_epochs:int = 50
     batch_size:int = 32
     train_ratio: float = 0.8
     validation_ratio: float = 0.1
