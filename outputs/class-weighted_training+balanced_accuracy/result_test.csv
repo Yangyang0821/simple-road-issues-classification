@@ -1,0 +1,10 @@
+Class, Samples , Correct, Accuracy(%), Precision, Recall, F1
+broken_road_sign,179,165,92.18,0.851,0.922,0.885
+damaged_road,68,49,72.06,0.408,0.721,0.521
+illegal_parking,10,9,90.00,0.900,0.900,0.900
+pothole,335,272,81.19,0.904,0.812,0.855
+littering,142,137,96.48,0.873,0.965,0.916
+vandalism,213,153,71.83,0.927,0.718,0.810
+Overall accuracy,947,785,82.89,,,
+Balanced accuracy,,,83.96,,0.840,
+Macro F1,,,,,,0.815

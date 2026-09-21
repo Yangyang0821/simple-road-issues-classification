@@ -14,21 +14,26 @@ class Dataset_info():
 
 @dataclass
 class Output_paths():
-    experiment_name: str = "class-weighted_training"   # Creat experiment result folder
+    experiment_name: str = "baseline"   # Creat experiment result folder
     result_dir: str = str(PROJECT_DIR / "outputs" / experiment_name)
     best_model_path: str = str(PROJECT_DIR / "outputs" / experiment_name / "best_model.pth")
 
 @dataclass
 class Hyperparameters():
     learning_rate:float = 0.001
-    num_epochs:int = 50
+    num_epochs:int = 2
     batch_size:int = 32
     train_ratio: float = 0.8
     validation_ratio: float = 0.1
     test_ratio: float = 0.1
 
-    use_class_weights: bool = True
+    use_class_weights: bool = False
     model_selection_metric: str = "accuracy"  # "accuracy" or "balanced_accuracy"
+
+    # Seed for weight init and batch shuffling. The data split has its own fixed
+    # random_state=42 in get_data.py. Note: v1-v3 in README were run before this
+    # seed was added, so they are only approximately reproducible.
+    seed: int = 42
 
 @dataclass
 class CNN_Parameters():

@@ -1,11 +1,25 @@
-from cnn_model import set_model, model_training, validate_epoch, load_best_model
+import random
+
+import numpy as np
+import torch
+
+from cnn_model import set_model, model_training, validate_epoch, load_best_model, recall_and_f1
 from config import CNN_Parameters, Config, Hyperparameters
 from get_data import (download_dataset, load_dataset, create_dataloaders,
                       count_labels, compute_class_weights)
 from prepare_dataset import TRAIN_CLASSES
 from plot import plot_training_curves, plot_evaluation_result, save_report_csv, save_config
 
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)          # also seeds DataLoader shuffling
+    torch.cuda.manual_seed_all(seed)
+
+
 if __name__ == "__main__":
+    set_seed(Hyperparameters.seed)
     class_names = list(TRAIN_CLASSES)
 
     dataset_root = download_dataset()
@@ -30,9 +44,11 @@ if __name__ == "__main__":
     cnn_model = load_best_model(cnn_model, h_device)
     _, _, val_cm = validate_epoch(h_device, loss_fn, cnn_model, val_loader)
     test_accuracy, test_loss, test_cm = validate_epoch(h_device, loss_fn, cnn_model, test_loader)
-    print(f"Test Loss: {test_loss:.4f}   Test Accuracy: {test_accuracy:.2f}%")
+    test_balanced_acc = recall_and_f1(test_cm)[0]
+    print(f"Test Loss: {test_loss:.4f}   Test Accuracy: {test_accuracy:.2f}%   "
+          f"Test Balanced Accuracy: {test_balanced_acc:.2f}%")
 
-    plot_training_curves(history)
+    plot_training_curves(history, test_loss, test_accuracy, test_balanced_acc)
     plot_evaluation_result(test_cm, val_cm, class_names)
     save_report_csv(test_cm, class_names, filename="result_test.csv")
     config = Config()

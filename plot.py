@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from pathlib import Path
 
-from config import Config, Output_paths
+from config import Config, Output_paths, PROJECT_DIR
 from cnn_model import per_class_accuracy, precision_recall_f1, recall_and_f1
 
 
@@ -28,10 +28,17 @@ def to_numpy(x) -> np.ndarray:
 
 
 # Loss / Accuracy / Balanced accuracy
-def plot_training_curves(history: dict, show: bool = True):
+def plot_training_curves(history: dict,
+                         test_loss: float,
+                         test_accuracy: float,
+                         test_balanced_acc: float | None = None,
+                         show: bool = True):
     epochs = range(1, len(history["train_loss"]) + 1)
     best_epoch = history.get("best_epoch")
     metric = history.get("metric", "accuracy")
+    # Test metrics are computed with the best checkpoint (weights saved at best_epoch),
+    # so the test point is placed at best_epoch, not at the last epoch.
+    test_epoch = best_epoch if best_epoch else len(history["train_loss"])
     fig, (ax_loss, ax_acc, ax_bal) = plt.subplots(1, 3, figsize=(16, 6))
 
     # Loss
@@ -39,6 +46,8 @@ def plot_training_curves(history: dict, show: bool = True):
     ax_loss.plot(epochs, history["val_loss"], color="tab:red", linewidth=2, label="Validation")
     ax_loss.set_title("Loss", fontsize=15)
     ax_loss.set_ylabel("Cross-Entropy Loss", fontsize=12)
+    ax_loss.scatter(test_epoch, test_loss, color="tab:orange", s=75, zorder=5,
+                    label=f"Test, best model ({test_loss:.4f})")
 
     # Accuracy
     ax_acc.plot(epochs, history["train_acc"], color="tab:blue", linewidth=2, label="Train")
@@ -46,6 +55,8 @@ def plot_training_curves(history: dict, show: bool = True):
     ax_acc.set_title("Accuracy", fontsize=15)
     ax_acc.set_ylabel("Accuracy (%)", fontsize=12)
     ax_acc.set_ylim(0, 100)
+    ax_acc.scatter(test_epoch, test_accuracy, color="tab:orange", s=75, zorder=5,
+                   label=f"Test, best model ({test_accuracy:.2f}%)")
 
     # Balanced accuracy
     ax_bal.plot(epochs, history["val_acc"], color="tab:red", linewidth=2,
@@ -55,6 +66,9 @@ def plot_training_curves(history: dict, show: bool = True):
     ax_bal.set_title("Validation: Accuracy vs Balanced Accuracy", fontsize=15)
     ax_bal.set_ylabel("(%)", fontsize=12)
     ax_bal.set_ylim(0, 100)
+    if test_balanced_acc is not None:
+        ax_bal.scatter(test_epoch, test_balanced_acc, color="tab:orange", s=75, zorder=5,
+                       label=f"Test balanced acc, best model ({test_balanced_acc:.2f}%)")
 
     # Show best epoch
     if best_epoch:
@@ -77,7 +91,6 @@ def draw_per_class_accuracy(ax: Axes, cm: torch.Tensor, class_names: list[str], 
     acc, tot = to_numpy(acc), to_numpy(tot)
     overall = 100 * cm.diag().sum().item() / max(cm.sum().item(), 1)
 
-    # colors = ["tab:green" if a >= 80 else "tab:orange" if a >= 60 else "tab:red" for a in acc]
     bars = ax.bar(class_names, acc, color="#CCCCCC", edgecolor="black")
     for bar, a, t in zip(bars, acc, tot):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
@@ -181,8 +194,21 @@ def save_report_csv(cm: torch.Tensor, class_names: list[str], filename: str = "r
     print(f"Result saved: {out_path}")
 
 
+def _relativize_paths(obj):
+    # Replace absolute paths under PROJECT_DIR with project-relative ones, so the
+    # saved config.json is portable.
+    if isinstance(obj, dict):
+        return {k: _relativize_paths(v) for k, v in obj.items()}
+    if isinstance(obj, str):
+        try:
+            return Path(obj).relative_to(PROJECT_DIR).as_posix()
+        except ValueError:
+            return obj
+    return obj
+
+
 def save_config(config: Config, filename: str = "config.json"):
     out_path = Path(Output_paths.result_dir) / filename
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(asdict(config), f, indent=4)
+        json.dump(_relativize_paths(asdict(config)), f, indent=4)

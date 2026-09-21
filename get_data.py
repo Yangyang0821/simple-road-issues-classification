@@ -19,7 +19,7 @@ class RoadIssuesDataset(Dataset):
 
     def __getitem__(self, index):
         image_path, label = self.image_paths[index]
-        image = Image.open(image_path)#.convert("RGB")
+        image = Image.open(image_path).convert("RGB")
         if self.transform:
             image = self.transform(image)
         return image, label
@@ -97,9 +97,4 @@ def create_dataloaders(train_dataset, val_dataset, test_dataset):
     train_loader = DataLoader(train_dataset, batch_size=Hyperparameters.batch_size, shuffle=True)
     val_loader   = DataLoader(val_dataset, batch_size=Hyperparameters.batch_size, shuffle=False)
     test_loader  = DataLoader(test_dataset, batch_size=Hyperparameters.batch_size, shuffle=False)
-    # images, labels = next(iter(train_loader))
-    # print("images", images[0])
-    # print("images shape:", images.shape)
-    # print("labels", labels[0])
-    # print("labels shape:", labels.shape)
     return train_loader, val_loader, test_loader

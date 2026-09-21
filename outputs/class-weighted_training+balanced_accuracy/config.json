@@ -1,0 +1,41 @@
+{
+    "dataset_info": {
+        "dataset_path": "dataset",
+        "dataset_name": "programmerrdai/road-issues-detection-dataset",
+        "raw_path": "dataset/raw",
+        "cache_path": "dataset/cache"
+    },
+    "output_paths": {
+        "experiment_name": "class-weighted_training+balanced_accuracy",
+        "result_dir": "outputs/class-weighted_training+balanced_accuracy",
+        "best_model_path": "outputs/class-weighted_training+balanced_accuracy/best_model.pth"
+    },
+    "hyperparameters": {
+        "learning_rate": 0.001,
+        "num_epochs": 50,
+        "batch_size": 32,
+        "train_ratio": 0.8,
+        "validation_ratio": 0.1,
+        "test_ratio": 0.1,
+        "use_class_weights": true,
+        "model_selection_metric": "balanced_accuracy"
+    },
+    "cnn_parameters": {
+        "input_channels": 3,
+        "conv1_out_channels": 16,
+        "conv2_out_channels": 16,
+        "conv3_out_channels": 16,
+        "conv_kernel_size": 3,
+        "num_classes": 6,
+        "dropout1_rate": 0.5,
+        "dropout2_rate": 0.25,
+        "dropout3_rate": 0.1,
+        "bn1_in_channels": 16,
+        "bn2_in_channels": 16,
+        "bn3_in_channels": 16,
+        "fc1_in": 4096,
+        "fc2_in": 16,
+        "fc3_in": 16,
+        "pool_kernel_size": 2
+    }
+}

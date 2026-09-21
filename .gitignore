@@ -9,9 +9,8 @@ __pycache__/
 # Dataset
 dataset/
 
-# Result
+# Result (config.json / result_test.csv / figures are kept)
 *.pth
-*.json
 
 # Local / test files
 test.py
